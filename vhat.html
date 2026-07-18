@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Guitar Scale Visualizer Pro</title>
+    <script src="https://cdn.tailwindcss.com">
+    </script>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --panel: #161b22;
+            --wood1: #7b4f26;
+            --wood2: #3d2410;
+            --metal: #d0d7de;
+            --root: #ff7b00;
+            --scale: #ffd43b;
+            --favorite: #ff4d6d;
+        }
+        body {
+            background: radial-gradient(circle at top, #252f42, #0d1117);
+            color: white;
+            font-family: Inter, system-ui, sans-serif;
+        }
+        .fretboard {
+            background: linear-gradient(180deg, var(--wood1), var(--wood2));
+            border: 6px solid #241205;
+            border-radius: 20px;
+            padding: 6px;
+            overflow-x: auto;
+            box-shadow: 0 20px 70px rgba(0, 0, 0, .6);
+        }
+        .string-row {
+            display: flex;
+            height: 70px;
+            position: relative;
+            min-width: max-content;
+        }
+        .string-row:before {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 50%;
+            height: 2px;
+            background: linear-gradient(90deg, #fff, #aaa, #fff);
+        }
+        /* Строка с номерами ладов */
+        .fret-numbers-row {
+            display: flex;
+            height: 32px;
+            min-width: max-content;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 2px;
+            /* небольшой отступ от струн */;
+        }
+        .fret-numbers-row .fret {
+            width: 72px;
+            height: 32px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #aaa;
+            position: relative;
+        }
+        .fret-numbers-row .fret:after {
+            display: none;
+            /* убираем вертикальные линии */;
+        }
+        .fret {
+            width: 72px;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            flex-shrink: 0;
+        }
+        .fret:after {
+            content: "";
+            position: absolute;
+            right: -2px;
+            height: 100%;
+            width: 4px;
+            background: linear-gradient(#fff, #777, #fff);
+        }
+        .note {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 2;
+            transition: .2s;
+            cursor: pointer;
+        }
+        .note:hover {
+            transform: scale(1.2);
+        }
+        .root {
+            background: var(--root);
+            box-shadow: 0 0 25px var(--root);
+        }
+        .scale {
+            background: var(--scale);
+            color: #111;
+        }
+        .marker {
+            position: absolute;
+            bottom: 5px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, .3);
+        }
+        /* маркеры не отображаются в строке номеров */
+        .fret-numbers-row .marker {
+            display: none;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, .06);
+            border: 1px solid rgba(255, 255, 255, .1);
+            backdrop-filter: blur(12px);
+        }
+        select,
+        input,
+        button {
+            transition: .2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        .badge {
+            background: rgba(255, 255, 255, .1);
+            padding: 5px 12px;
+            border-radius: 999px;
+            font-size: 13px;
+        }
+        .note-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 6px;
+        }
+        .note-pill {
+            background: rgba(255, 215, 0, .15);
+            border: 1px solid rgba(255, 215, 0, .3);
+            border-radius: 999px;
+            padding: 2px 14px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #ffd43b;
+        }
+        .note-pill.root-pill {
+            background: rgba(255, 123, 0, .25);
+            border-color: #ff7b00;
+            color: #ff7b00;
+        }
+    </style>
+</head>
+<body class="p-6">
+    <div class="max-w-7xl mx-auto">
+        <h1 class="text-4xl font-bold mb-2">🎸 Guitar Scale Visualizer Pro</h1>
+        <p class="text-gray-400 mb-6">Исследователь ладов для рока, джаза, восточной музыки и саундтреков</p>
+
+        <div class="panel rounded-2xl p-5 mb-6">
+            <div class="grid md:grid-cols-5 gap-4">
+                <select id="category" class="bg-slate-800 p-3 rounded"></select>
+                <select id="scale" class="bg-slate-800 p-3 rounded"></select>
+                <select id="root" class="bg-slate-800 p-3 rounded"></select>
+                <select id="tuning" class="bg-slate-800 p-3 rounded"></select>
+                <button id="random" class="bg-orange-600 rounded p-3">🎲 Random</button>
+            </div>
+            <div class="mt-5 flex gap-3 flex-wrap">
+                <button id="favoriteBtn" class="bg-pink-600 rounded px-4 py-2">⭐ Favorite</button>
+                <button id="showFavorites" class="bg-purple-600 rounded px-4 py-2">⭐ Favorites only</button>
+            </div>
+        </div>
+
+        <div id="info" class="panel rounded-xl p-5 mb-6"></div>
+
+        <!-- Гриф с номерами ладов внутри -->
+        <div id="board" class="fretboard"></div>
+    </div>
+
+    <script>
+        const NOTES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+
+        const SCALE_CATEGORIES = {
+            "🎸 Rock / Metal": {
+                "Minor Pentatonic": {
+                    notes: [0, 3, 5, 7, 10],
+                    desc: "Главная гамма блюза, рока и соло-гитары",
+                    mood: "Dark / Powerful",
+                    formula: "1 ♭3 4 5 ♭7",
+                    family: "Minor",
+                    parent: "Natural Minor",
+                    origin: "Упрощённая форма натурального минора",
+                    changes: "Убраны 2 и ♭6"
+                },
+                "Blues": {
+                    notes: [0, 3, 5, 6, 7, 10],
+                    desc: "Роковый блюзовый звук",
+                    mood: "Dirty / Emotional",
+                    formula: "1 ♭3 4 ♭5 5 ♭7",
+                    family: "Minor",
+                    parent: "Minor Pentatonic",
+                    origin: "Minor Pentatonic + blue note",
+                    changes: "Добавлена ♭5"
+                },
+                "Aeolian (Natural Minor)": {
+                    notes: [0, 2, 3, 5, 7, 8, 10],
+                    desc: "Натуральный минор",
+                    mood: "Sad / Epic",
+                    formula: "1 2 ♭3 4 5 ♭6 ♭7",
+                    family: "Minor",
+                    parent: "Natural Minor",
+                    origin: "6-й лад мажора",
+                    changes: "♭3 ♭6 ♭7"
+                },
+                "Dorian": {
+                    notes: [0, 2, 3, 5, 7, 9, 10],
+                    desc: "Минор с яркой шестой",
+                    mood: "Groove / Mystic",
+                    formula: "1 2 ♭3 4 5 6 ♭7",
+                    family: "Minor",
+                    parent: "Major",
+                    origin: "2-й лад мажора",
+                    changes: "♭3 ♭7"
+                },
+                "Phrygian": {
+                    notes: [0, 1, 3, 5, 7, 8, 10],
+                    desc: "Темный металлический лад",
+                    mood: "Dark",
+                    formula: "1 ♭2 ♭3 4 5 ♭6 ♭7",
+                    family: "Minor",
+                    parent: "Major",
+                    origin: "3-й лад мажора",
+                    changes: "♭2 ♭3 ♭6 ♭7"
+                },
+                "Harmonic Minor": {
+                    notes: [0, 2, 3, 5, 7, 8, 11],
+                    desc: "Неоклассический металл",
+                    mood: "Dramatic",
+                    formula: "1 2 ♭3 4 5 ♭6 7",
+                    family: "Minor",
+                    parent: "Natural Minor",
+                    origin: "Натуральный минор с повышенной 7",
+                    changes: "♭7 → 7"
+                },
+                "Melodic Minor": {
+                    notes: [0, 2, 3, 5, 7, 9, 11],
+                    desc: "Fusion, джаз, прогрессив",
+                    mood: "Advanced",
+                    formula: "1 2 ♭3 4 5 6 7",
+                    family: "Minor",
+                    parent: "Natural Minor",
+                    origin: "Минор с повышенными 6 и 7",
+                    changes: "♭6 ♭7 → 6 7"
+                }
+            },
+            "🕌 Eastern / Arabic": {
+                "Hijaz": {
+                    notes: [0, 1, 4, 5, 7, 8, 10],
+                    desc: "Арабский макамный оттенок (Phrygian Dominant)",
+                    mood: "Desert / Oud",
+                    formula: "1 ♭2 3 4 5 ♭6 ♭7",
+                    family: "Maqam / Exotic",
+                    parent: "Harmonic Minor",
+                    origin: "5-й лад гармонического минора (макам Хиджаз)",
+                    changes: "♭2 ♮3 ♭6 ♭7 (Phrygian с большой терцией)"
+                },
+                "Phrygian Dominant": {
+                    notes: [0, 1, 4, 5, 7, 8, 10],
+                    desc: "Фламенко и арабский лад",
+                    mood: "Flamenco",
+                    formula: "1 ♭2 3 4 5 ♭6 ♭7",
+                    family: "Minor",
+                    parent: "Harmonic Minor",
+                    origin: "5-й лад гармонического минора",
+                    changes: "Phrygian + большая 3"
+                },
+                "Hijaz Kar": {
+                    notes: [0, 1, 4, 5, 7, 8, 11],
+                    desc: "Более драматичный Hijaz (Double Harmonic)",
+                    mood: "Arabic",
+                    formula: "1 ♭2 3 4 5 ♭6 7",
+                    family: "Exotic",
+                    parent: "Double Harmonic Major",
+                    origin: "Макам Хиджаз Кар (восточный лад с мажорной 7)",
+                    changes: "♭2 ♭6, мажорная 7"
+                },
+                "Hungarian Minor": {
+                    notes: [0, 2, 3, 6, 7, 8, 11],
+                    desc: "Цыганский минор",
+                    mood: "Gypsy",
+                    formula: "1 2 ♭3 ♯4 5 ♭6 7",
+                    family: "Minor",
+                    parent: "Harmonic Minor",
+                    origin: "Модифицированный гармонический минор",
+                    changes: "♯4"
+                },
+                "Persian": {
+                    notes: [0, 1, 4, 5, 6, 8, 11],
+                    desc: "Персидская традиционная гамма",
+                    mood: "Eastern",
+                    formula: "1 ♭2 3 4 ♭5 ♭6 7",
+                    family: "Exotic",
+                    parent: "Double Harmonic",
+                    origin: "Персидский традиционный лад",
+                    changes: "♭2 ♭5 ♭6"
+                }
+            },
+            "🎷 Jazz / Fusion": {
+                "Lydian": {
+                    notes: [0, 2, 4, 6, 7, 9, 11],
+                    desc: "Светлый джазовый лад",
+                    mood: "Dreamy",
+                    formula: "1 2 3 ♯4 5 6 7",
+                    family: "Major",
+                    parent: "Major",
+                    origin: "4-й лад мажора",
+                    changes: "♯4"
+                },
+                "Lydian Dominant": {
+                    notes: [0, 2, 4, 6, 7, 9, 10],
+                    desc: "Джазовый доминантовый звук",
+                    mood: "Fusion",
+                    formula: "1 2 3 ♯4 5 6 ♭7",
+                    family: "Major",
+                    parent: "Melodic Minor",
+                    origin: "4-й лад мелодического минора",
+                    changes: "♯4 ♭7"
+                },
+                "Mixolydian": {
+                    notes: [0, 2, 4, 5, 7, 9, 10],
+                    desc: "Доминантовый лад",
+                    mood: "Blues Jazz",
+                    formula: "1 2 3 4 5 6 ♭7",
+                    family: "Major",
+                    parent: "Major",
+                    origin: "5-й лад мажора",
+                    changes: "♭7"
+                }
+            },
+            "🎮 Cinematic / Game": {
+                "Locrian": {
+                    notes: [0, 1, 3, 5, 6, 8, 10],
+                    desc: "Самый нестабильный лад",
+                    mood: "Dark Fantasy",
+                    formula: "1 ♭2 ♭3 4 ♭5 ♭6 ♭7",
+                    family: "Minor",
+                    parent: "Major",
+                    origin: "7-й лад мажора",
+                    changes: "♭2 ♭3 ♭5 ♭6 ♭7"
+                },
+                "Byzantine": {
+                    notes: [0, 1, 4, 5, 7, 8, 11],
+                    desc: "Древний византийский звук (Double Harmonic Major)",
+                    mood: "Ancient",
+                    formula: "1 ♭2 3 4 5 ♭6 7",
+                    family: "Exotic",
+                    parent: "Double Harmonic Major",
+                    origin: "Византийский церковный лад",
+                    changes: "♭2 ♭6"
+                }
+            }
+        };
+
+        const TUNINGS = {
+            "E Standard": ["E", "A", "D", "G", "B", "E"],
+            "D Standard": ["D", "G", "C", "F", "A", "D"],
+            "C Standard": ["C", "F", "A#", "D#", "G", "C"],
+            "Drop D": ["D", "A", "D", "G", "B", "E"],
+            "Drop C": ["C", "G", "C", "F", "A", "D"]
+        };
+
+        const category = document.getElementById("category");
+        const scale = document.getElementById("scale");
+        const root = document.getElementById("root");
+        const tuning = document.getElementById("tuning");
+
+        NOTES.forEach(n => {
+            root.innerHTML += `<option>${n}</option>`;
+        });
+        Object.keys(TUNINGS).forEach(t => {
+            tuning.innerHTML += `<option>${t}</option>`;
+        });
+        Object.keys(SCALE_CATEGORIES).forEach(c => {
+            category.innerHTML += `<option>${c}</option>`;
+        });
+
+        root.value = "A";
+        tuning.value = "C Standard";
+
+        let currentScale = "Dorian";
+
+        function updateScales() {
+            scale.innerHTML = "";
+            const scales = SCALE_CATEGORIES[category.value];
+            Object.keys(scales).forEach(s => {
+                scale.innerHTML += `<option>${s}</option>`;
+            });
+            if (scales[currentScale]) {
+                scale.value = currentScale;
+            } else {
+                scale.selectedIndex = 0;
+                currentScale = scale.value;
+            }
+            renderInfo();
+            render();
+        }
+
+        category.addEventListener("change", updateScales);
+        scale.addEventListener("change", () => {
+            currentScale = scale.value;
+            renderInfo();
+            render();
+        });
+        root.addEventListener("change", render);
+        tuning.addEventListener("change", render);
+
+        function getScaleData() {
+            return SCALE_CATEGORIES[category.value][scale.value];
+        }
+
+        function noteIndex(n) { return NOTES.indexOf(n); }
+
+        function renderInfo() {
+            const data = getScaleData();
+            const rootNote = root.value;
+            const rootIdx = noteIndex(rootNote);
+            const scaleSemitones = data.notes;
+            const actualNotes = scaleSemitones.map(s => NOTES[(rootIdx + s) % 12]);
+
+            let notePills = actualNotes.map((n, i) => {
+                const isRoot = (i === 0);
+                return `<span class="note-pill ${isRoot ? 'root-pill' : ''}">${n}</span>`;
+            }).join('');
+
+            document.getElementById("info").innerHTML = `
+            <h2 class="text-2xl font-bold mb-3">${scale.value}</h2>
+            <div class="flex gap-2 flex-wrap mb-4">
+              <span class="badge">${category.value}</span>
+              <span class="badge">${data.mood}</span>
+              <span class="badge">${data.family}</span>
+            </div>
+            <p class="text-gray-300 mb-4">${data.desc}</p>
+
+            <div class="grid md:grid-cols-2 gap-3 text-sm">
+              <div class="bg-white/5 rounded-xl p-3"><b>🎼 Семья:</b><br>${data.family}</div>
+              <div class="bg-white/5 rounded-xl p-3"><b>📚 Основа:</b><br>${data.parent}</div>
+              <div class="bg-white/5 rounded-xl p-3"><b>🌱 Происхождение:</b><br>${data.origin}</div>
+              <div class="bg-white/5 rounded-xl p-3"><b>🔄 Изменения:</b><br>${data.changes}</div>
+            </div>
+
+            <div class="mt-5 bg-black/20 rounded-xl p-4">
+              <p class="mb-1"><b>Formula:</b> <span class="text-yellow-300 text-xl">${data.formula}</span></p>
+              <div class="mt-3">
+                <span class="text-gray-400 text-sm">Ноты в ладу (${rootNote}):</span>
+                <div class="note-list">${notePills}</div>
+              </div>
+            </div>
+          `;
+        }
+
+        function render() {
+            const board = document.getElementById("board");
+            board.innerHTML = "";
+
+            // Строка с номерами ладов (вставляем первой)
+            const numRow = document.createElement("div");
+            numRow.className = "fret-numbers-row";
+            for (let fret = 0; fret <= 15; fret++) {
+                const cell = document.createElement("div");
+                cell.className = "fret";
+                cell.textContent = fret;
+                // можно добавить маркеры, но они скрыты через CSS
+                numRow.appendChild(cell);
+            }
+            board.appendChild(numRow);
+
+            // Далее струны
+            const data = getScaleData();
+            const rootIdx = noteIndex(root.value);
+            const scaleNotes = data.notes.map(x => (rootIdx + x) % 12);
+
+            [...TUNINGS[tuning.value]].reverse().forEach(string => {
+                const row = document.createElement("div");
+                row.className = "string-row";
+
+                for (let fret = 0; fret <= 15; fret++) {
+                    const cell = document.createElement("div");
+                    cell.className = "fret";
+                    const note = (noteIndex(string) + fret) % 12;
+
+                    if (scaleNotes.includes(note)) {
+                        const dot = document.createElement("div");
+                        dot.className = "note " + (note === rootIdx ? "root" : "scale");
+                        dot.textContent = NOTES[note];
+                        cell.appendChild(dot);
+                    }
+
+                    if ([3, 5, 7, 9, 15].includes(fret)) {
+                        const marker = document.createElement("div");
+                        marker.className = "marker";
+                        cell.appendChild(marker);
+                    }
+                    if (fret === 12) {
+                        const m1 = document.createElement("div");
+                        m1.className = "marker";
+                        m1.style.bottom = "18px";
+                        const m2 = document.createElement("div");
+                        m2.className = "marker";
+                        m2.style.bottom = "2px";
+                        cell.append(m1, m2);
+                    }
+                    row.appendChild(cell);
+                }
+                board.appendChild(row);
+            });
+        }
+
+        // Random
+        document.getElementById("random").addEventListener("click", () => {
+            const cats = Object.keys(SCALE_CATEGORIES);
+            const randomCat = cats[Math.floor(Math.random() * cats.length)];
+            category.value = randomCat;
+            updateScales();
+            const opts = scale.options;
+            scale.selectedIndex = Math.floor(Math.random() * opts.length);
+            currentScale = scale.value;
+            renderInfo();
+            render();
+        });
+
+        // Favorites
+        let favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
+
+        document.getElementById("favoriteBtn").addEventListener("click", () => {
+            const id = category.value + "|" + scale.value;
+            if (favorites.includes(id)) {
+                favorites = favorites.filter(x => x !== id);
+            } else {
+                favorites.push(id);
+            }
+            localStorage.setItem("favorites", JSON.stringify(favorites));
+            alert("Favorites updated ⭐");
+        });
+
+        document.getElementById("showFavorites").addEventListener("click", () => {
+            let list = [];
+            favorites.forEach(id => {
+                let parts = id.split("|");
+                list.push(parts[1]);
+            });
+            if (list.length) {
+                alert("⭐ Favorites:\n\n" + list.join("\n"));
+            } else {
+                alert("No favorites yet");
+            }
+        });
+
+        updateScales();
+    </script>
+</body>
+</html>
